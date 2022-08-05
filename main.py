@@ -3,19 +3,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+def mse_calc(cluster_x, cluster_y, centroid):
+    sum = sum(cluster_x)
+
 datafile = './545_cluster_dataset programming 3.csv'
 X = 0
 Y = 1
 DIM = 2
-CLUSTERS = 5
+CLUSTERS = 4
 CLUSTER = []
-ITERATIONS = 10
+MAX_ITERATIONS = 50
 COORD = {X : 'X', Y : 'Y'}
-COLORS = {0 : "red", 1 : "blue", 2 : "green", 3 : "yellow", 4 : "brown"}
-for i in range(CLUSTERS):
-    CLUSTER.append(i)
-
-centroid = [[0,0] for i in range(CLUSTERS)]
+SCALE = 1
 
 # Load data 
 with open(datafile, newline='') as csvfile:
@@ -23,19 +22,27 @@ with open(datafile, newline='') as csvfile:
 N = len(data)
 
 # Randomly select centroids 
+centroid = [[0,0] for i in range(CLUSTERS)]
 for c in range(CLUSTERS):
     index = random.randint(0,N)
     centroid[c][X] = data[COORD[X]][index]
     centroid[c][Y] = data[COORD[Y]][index]
 
-manager = plt.get_current_fig_manager()
-manager.full_screen_toggle()
-for i in range(ITERATIONS):
+# Display full screen
+# manager = plt.get_current_fig_manager()
+# manager.full_screen_toggle()
+# SCALE = 5
+
+done = False
+iteration = 0
+while (done == False and iteration <= MAX_ITERATIONS):
+    done = True
     cluster_assignment = []
-    for c in range (CLUSTERS):
+    # Create cluster dataframes to store X and
+    for cluster in range (CLUSTERS):
         cluster_assignment.append([])
-        cluster_assignment[CLUSTER[c]].append(pd.DataFrame({'X':[]}))
-        cluster_assignment[CLUSTER[c]].append(pd.DataFrame({'Y':[]}))
+        cluster_assignment[cluster].append(pd.DataFrame({'X':[]}))
+        cluster_assignment[cluster].append(pd.DataFrame({'Y':[]}))
 
     distances = pd.DataFrame()
     for c in range(CLUSTERS):
@@ -44,21 +51,28 @@ for i in range(ITERATIONS):
         distances_tmp = distances_tmp.pow(2)
         distances[c] = distances_tmp.sum(axis=1)
 
-    distances = np.transpose(distances)
+    closest_centroid = distances.idxmin(axis=1)
     for index in range(N-1):
-        closest_centroid = distances[index].idxmin()
-        length = len(cluster_assignment[closest_centroid][X].index)
-        cluster_assignment[closest_centroid][X].loc[length] = [data[COORD[X]][index]]
-        cluster_assignment[closest_centroid][Y].loc[length] = [data[COORD[Y]][index]]
+        length = len(cluster_assignment[closest_centroid[index]][X].index)
+        cluster_assignment[closest_centroid[index]][X].loc[length] = [data[COORD[X]][index]]
+        cluster_assignment[closest_centroid[index]][Y].loc[length] = [data[COORD[Y]][index]]
     
     plt.clf()
     for cluster in range(CLUSTERS):
         x = cluster_assignment[cluster][X]
         y = cluster_assignment[cluster][Y]
-        plt.scatter(x, y, color = COLORS[cluster], s=50)
-        plt.scatter(centroid[cluster][X], centroid[cluster][Y], color = 'black', s=200)
-        centroid[cluster][X]= float(cluster_assignment[cluster][X].sum())/len(cluster_assignment[cluster][X].index)
-        centroid[cluster][Y]= float(cluster_assignment[cluster][Y].sum())/len(cluster_assignment[cluster][Y].index)
-
+        plt.scatter(x, y, s=(10 * SCALE))
+        plt.scatter(centroid[cluster][X], centroid[cluster][Y], color = 'black', s=(20 * SCALE))
+        new_centroid_x = float(cluster_assignment[cluster][X].sum())/len(cluster_assignment[cluster][X].index)
+        new_centroid_y = float(cluster_assignment[cluster][Y].sum())/len(cluster_assignment[cluster][Y].index) 
+        if (centroid[cluster][X] / new_centroid_x < 0.98 or centroid[cluster][X] / new_centroid_x > 1.02): 
+            done = False
+        if (centroid[cluster][Y] / new_centroid_y < 0.98 or centroid[cluster][Y] / new_centroid_y > 1.02): 
+            done = False
+        centroid[cluster][X]= new_centroid_x
+        centroid[cluster][Y]= new_centroid_y
+    iteration += 1
+    print(f'Iteration: {iteration}')
     plt.pause(0.01)
+print("FIN")
 plt.show()
